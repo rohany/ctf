@@ -152,6 +152,18 @@ int matmul(int     m,
       printf("\n");
       std::sort(times,times+niter);
       printf("A (%d*%d sym %d sp %lf), B (%d*%d sym %d sp %lf), C (%d*%d sym %d sp %lf) Min time = %lf, Avg time = %lf, Med time = %lf, Max time = %lf\n",m,k,sym_A,sp_A,k,n,sym_B,sp_B,m,n,sym_C,sp_C,min_time,tot_time/niter, times[niter/2], max_time);
+
+      double sum = 0.0;
+      for (int i = 0; i < niter; i++) {
+        sum += times[i];
+      }
+      auto avgTime = sum / double(niter);
+      size_t flopCount = size_t(m) * size_t(n) * (2 * size_t(k) - 1);
+      double gflop = double(flopCount) / 1e9;
+      auto gflops = gflop / avgTime;
+      auto nodes = dw.np / 2;
+      auto gflopsPerNode = gflops / (double(nodes));
+      printf("On %ld nodes achieved GFLOPS per node: %lf.\n", nodes, gflopsPerNode);
     }
   
   }
