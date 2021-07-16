@@ -38,7 +38,8 @@ int matmul(int     m,
            double  sp_C=1.,
            bool    test=true,
            bool    bench=false,
-           int     niter=10){
+           int     niter=10,
+           int     procsPerNode=1){
   assert(test || bench);
 
   int sA = sp_A < 1. ? SP : 0;
@@ -161,7 +162,7 @@ int matmul(int     m,
       size_t flopCount = size_t(m) * size_t(n) * (2 * size_t(k) - 1);
       double gflop = double(flopCount) / 1e9;
       auto gflops = gflop / avgTime;
-      auto nodes = dw.np / 2;
+      auto nodes = dw.np / procsPerNode;
       auto gflopsPerNode = gflops / (double(nodes));
       printf("On %ld nodes achieved GFLOPS per node: %lf.\n", nodes, gflopsPerNode);
     }
@@ -185,7 +186,7 @@ char* getCmdOption(char ** begin,
 
 
 int main(int argc, char ** argv){
-  int rank, np, m, n, k, pass, niter, bench, sym_A, sym_B, sym_C, test;
+  int rank, np, m, n, k, pass, niter, bench, sym_A, sym_B, sym_C, test, procsPerNode;
   double sp_A, sp_B, sp_C;
   int const in_num = argc;
   char ** input_str = argv;
@@ -254,6 +255,10 @@ int main(int argc, char ** argv){
     if (test != 0 && test != 1) test = 1;
   } else test = 1;
 
+  if (getCmdOption(input_str, input_str+in_num, "--procs_per_node")){
+    procsPerNode = atoi(getCmdOption(input_str, input_str+in_num, "--procs_per_node"));
+  } else procsPerNode = 1;
+
 
   {
     World dw(argc, argv);
@@ -261,7 +266,7 @@ int main(int argc, char ** argv){
     if (rank == 0){
       printf("Multiplying A (%d*%d sym %d sp %lf) and B (%d*%d sym %d sp %lf) into C (%d*%d sym %d sp %lf) \n",m,k,sym_A,sp_A,k,n,sym_B,sp_B,m,n,sym_C,sp_C);
     }
-    pass = matmul(m, n, k, dw, sym_A, sym_B, sym_C, sp_A, sp_B, sp_C, test, bench, niter);
+    pass = matmul(m, n, k, dw, sym_A, sym_B, sym_C, sp_A, sp_B, sp_C, test, bench, niter, procsPerNode);
     assert(pass);
   }
 
