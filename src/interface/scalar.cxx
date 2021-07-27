@@ -39,8 +39,10 @@ namespace CTF {
   void Scalar<dtype>::set_val(dtype const val){
     int64_t s; 
     dtype * arr;
-    if (this->world->ctf->get_rank() == 0){
-      arr = this->world->ctf->get_raw_data(&s); 
+    if (this->wrld->rank == 0){
+      // arr = this->wrld->ctf->get_raw_data(&s); 
+      // arr = this->wrld->cdt.get_raw_data(&s); 
+      arr = this->get_raw_data(&s);
       arr[0] = val;
     }
   }
