@@ -56,6 +56,29 @@ void spmv(int nIter, int warmup, std::string filename, std::vector<int> dims, Wo
   }
 }
 
+void spmspv(int nIter, int warmup, std::string filename, std::string spmspvVecFile, std::vector<int> dims, World& dw) {
+  Tensor<double> B(2, true /* is_sparse */, dims.data(), dw);
+  Tensor<double> c(1, true /* is_sparse */, dims.data() + 1, dw);
+  Vector<double> a(dims[0], dw);
+
+  B.read_sparse_from_file(filename.c_str());
+  if (dw.rank == 0) {
+    std::cout << "Read " << B.nnz_tot << " non-zero entries from the file." << std::endl;
+  }
+  c.read_sparse_from_file(spmspvVecFile.c_str());
+  if (dw.rank == 0) {
+    std::cout << "Read " << c.nnz_tot << " non-zero entries from the file." << std::endl;
+  }
+
+  auto avgMs = benchmarkWithWarmup(warmup, nIter, [&]() {
+    a["i"] = B["ij"] * c["j"];
+  });
+
+  if (dw.rank == 0) {
+    std::cout << "Average execution time: " << avgMs << " ms." << std::endl;
+  }
+}
+
 void spttv(int nIter, int warmup, std::string filename, std::vector<int> dims, World& dw) {
   Tensor<double> B(3, true /* is_sparse */, dims.data(), dw);
   Tensor<double> A(2, true /* is_sparse */, dims.data(), dw);
@@ -97,6 +120,26 @@ void spttv(int nIter, int warmup, std::string filename, std::vector<int> dims, W
   // }
 }
 
+void spmm(int nIter, int warmup, std::string filename, std::vector<int> dims, World& dw, int jdim) {
+  Tensor<double> B(2, true /* is_sparse */, dims.data(), dw);
+  Matrix<double> A(dims[0], jdim, dw);
+  Matrix<double> C(dims[1], jdim, dw);
+  C.fill_random(1.0, 1.0);
+
+  B.read_sparse_from_file(filename.c_str());
+  if (dw.rank == 0) {
+    std::cout << "Read " << B.nnz_tot << " non-zero entries from the file." << std::endl;
+  }
+
+  auto avgMs = benchmarkWithWarmup(warmup, nIter, [&]() {
+    A["ij"] = B["ik"] * C["kj"];
+  });
+
+  if (dw.rank == 0) {
+    std::cout << "Average execution time: " << avgMs << " ms." << std::endl;
+  }
+}
+
 void mttkrp(int nIter, int warmup, std::string filename, std::vector<int> dims, World& dw, int ldim) {
   Tensor<double> B(3, true /* is_sparse */, dims.data(), dw);
   Matrix<double> A(dims[0], ldim, dw);
@@ -120,9 +163,83 @@ void mttkrp(int nIter, int warmup, std::string filename, std::vector<int> dims, 
   }
 }
 
+void sddmm(int nIter, int warmup, std::string filename, std::vector<int> dims, World& dw, int jdim) {
+  Tensor<double> A(2, true /* is_sparse */, dims.data(), dw);
+  Tensor<double> B(2, true /* is_sparse */, dims.data(), dw);
+  Matrix<double> C(dims[0], jdim, dw);
+  Matrix<double> D(jdim, dims[1], dw);
+  C.fill_random(1.0, 1.0);
+  D.fill_random(1.0, 1.0);
+  
+  B.read_sparse_from_file(filename.c_str());
+  if (dw.rank == 0) {
+    std::cout << "Read " << B.nnz_tot << " non-zero entries from the file." << std::endl;
+  }
+
+  auto avgMs = benchmarkWithWarmup(warmup, nIter, [&]() {
+    // TODO (rohany): Figure out how to do the builtin function call here.
+    // MTTKRP(&B, mats, 0, false);
+  });
+
+  if (dw.rank == 0) {
+    std::cout << "Average execution time: " << avgMs << " ms." << std::endl;
+  }
+}
+
+void innerprod(int nIter, int warmup, std::string filename, std::string tensorC, std::vector<int> dims, World& dw) {
+  Tensor<double> B(3, true /* is_sparse */, dims.data(), dw);
+  Tensor<double> C(3, true /* is_sparse */, dims.data(), dw);
+  Scalar<double> a(dw);
+
+  B.read_sparse_from_file(filename.c_str());
+  if (dw.rank == 0) {
+    std::cout << "Read " << B.nnz_tot << " non-zero entries from the file." << std::endl;
+  }
+  C.read_sparse_from_file(filename.c_str());
+  if (dw.rank == 0) {
+    std::cout << "Read " << C.nnz_tot << " non-zero entries from the file." << std::endl;
+  }
+
+  auto avgMs = benchmarkWithWarmup(warmup, nIter, [&]() {
+    a[""] = B["ijk"] * C["ijk"];
+  });
+
+  if (dw.rank == 0) {
+    std::cout << "Average execution time: " << avgMs << " ms." << std::endl;
+  }
+}
+
+void spadd3(int nIter, int warmup, std::string filename, std::string tensorC, std::string tensorD, std::vector<int> dims, World& dw) {
+  Tensor<double> A(2, true /* is_sparse */, dims.data(), dw);
+  Tensor<double> B(2, true /* is_sparse */, dims.data(), dw);
+  Tensor<double> C(2, true /* is_sparse */, dims.data(), dw);
+  Tensor<double> D(2, true /* is_sparse */, dims.data(), dw);
+
+  B.read_sparse_from_file(filename.c_str());
+  if (dw.rank == 0) {
+    std::cout << "Read " << B.nnz_tot << " non-zero entries from the file." << std::endl;
+  }
+  C.read_sparse_from_file(filename.c_str());
+  if (dw.rank == 0) {
+    std::cout << "Read " << C.nnz_tot << " non-zero entries from the file." << std::endl;
+  }
+  D.read_sparse_from_file(filename.c_str());
+  if (dw.rank == 0) {
+    std::cout << "Read " << D.nnz_tot << " non-zero entries from the file." << std::endl;
+  }
+
+  auto avgMs = benchmarkWithWarmup(warmup, nIter, [&]() {
+    A["ij"] = B["ij"] + C["ij"] + D["ij"];
+  });
+
+  if (dw.rank == 0) {
+    std::cout << "Average execution time: " << avgMs << " ms." << std::endl;
+  }
+}
+
 int main(int argc, char** argv) {
-  int nIter = 20, warmup = 10, mttkrpLDim = 32;
-  std::string filename, bench = "spmv", tensorDims;
+  int nIter = 20, warmup = 10, mttkrpLDim = 32, spmmJDim = 32;
+  std::string filename, bench = "spmv", tensorDims, spmspvVecFile, tensorC, tensorD;
   for (int i = 1; i < argc; i++) {
 #define INT_ARG(argname, varname) do {      \
           if (!strcmp(argv[i], (argname))) {  \
@@ -139,8 +256,13 @@ int main(int argc, char** argv) {
     STRING_ARG("-tensor", filename);
     STRING_ARG("-bench", bench);
     STRING_ARG("-dims", tensorDims);
+    STRING_ARG("-spmspvVec", spmspvVecFile);
+    STRING_ARG("-tensorC", tensorC);
+    STRING_ARG("-tensorD", tensorD);
     INT_ARG("-mttkrpLDim", mttkrpLDim);
+    INT_ARG("-spmmJDim", spmmJDim);
 #undef INT_ARG
+#undef STRING_ARG
   }
 
   if (filename.empty()) {
@@ -165,11 +287,34 @@ int main(int argc, char** argv) {
   World dw;
   int retVal = 0;
   if (bench == "spmv") {
-    std::cout << "Currently unsupported" << std::endl;
+    spmv(nIter, warmup, filename, dims, dw);
+  } else if (bench == "spmspv") {
+    if (spmspvVecFile.empty()) {
+      std::cout << "Must provide sparse vector." << std::endl;
+      retVal = -1;
+    } else {
+      spmspv(nIter, warmup, filename, spmspvVecFile, dims, dw);
+    }
+  } else if (bench == "spmm") {
+    spmm(nIter, warmup, filename, dims, dw, spmmJDim);
   } else if (bench == "spttv" ) {
     spttv(nIter, warmup, filename, dims, dw);
   } else if (bench == "mttkrp") {
     mttkrp(nIter, warmup, filename, dims, dw, mttkrpLDim);
+  } else if (bench == "innerprod") {
+    if (tensorC.empty()) {
+      std::cout << "Must provide tensorC." << std::endl;
+      retVal = -1;
+    } else {
+      innerprod(nIter, warmup, filename, tensorC, dims, dw);
+    }
+  } else if (bench == "spadd3") {
+    if (tensorC.empty() || tensorD.empty()) {
+      std::cout << "Must provide tensorC and tensorD." << std::endl;
+      retVal = -1;
+    } else {
+      spadd3(nIter, warmup, filename, tensorC, tensorD, dims, dw);
+    }
   } else {
     std::cout << "Unknown benchmark name: " << bench << std::endl;
     retVal = -1;
