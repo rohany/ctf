@@ -155,7 +155,7 @@ void mttkrp(int nIter, int warmup, std::string filename, std::vector<int> dims, 
   
   Tensor<double>* mats[] = {&A, &C, &D};
   auto avgMs = benchmarkWithWarmup(warmup, nIter, [&]() {
-    MTTKRP(&B, mats, 0, false);
+    MTTKRP(&B, mats, 0, true);
   });
 
   if (dw.rank == 0) {
