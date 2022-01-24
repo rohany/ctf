@@ -143,10 +143,13 @@ void spmm(int nIter, int warmup, std::string filename, std::vector<int> dims, Wo
 void mttkrp(int nIter, int warmup, std::string filename, std::vector<int> dims, World& dw, int ldim) {
   Tensor<double> B(3, true /* is_sparse */, dims.data(), dw);
   Matrix<double> A(dims[0], ldim, dw);
-  Matrix<double> C(dims[1], ldim, dw);
-  Matrix<double> D(dims[2], ldim, dw);
+  // These look backwards because the MTTKRP built-in routine operates on
+  // transposed matrices.
+  Matrix<double> C(ldim, dims[1], dw);
+  Matrix<double> D(ldim, dims[2], dw);
   C.fill_random(1.0, 1.0);
   D.fill_random(1.0, 1.0);
+
 
   B.read_sparse_from_file(filename.c_str());
   if (dw.rank == 0) {
@@ -164,10 +167,11 @@ void mttkrp(int nIter, int warmup, std::string filename, std::vector<int> dims, 
 }
 
 void sddmm(int nIter, int warmup, std::string filename, std::vector<int> dims, World& dw, int jdim) {
-  Tensor<double> A(2, true /* is_sparse */, dims.data(), dw);
   Tensor<double> B(2, true /* is_sparse */, dims.data(), dw);
   Matrix<double> C(dims[0], jdim, dw);
-  Matrix<double> D(jdim, dims[1], dw);
+  // This looks a little backwards because CTF operates on the second matrix
+  // transposed.
+  Matrix<double> D(dims[1], jdim, dw);
   C.fill_random(1.0, 1.0);
   D.fill_random(1.0, 1.0);
   
@@ -176,9 +180,10 @@ void sddmm(int nIter, int warmup, std::string filename, std::vector<int> dims, W
     std::cout << "Read " << B.nnz_tot << " non-zero entries from the file." << std::endl;
   }
 
+  int modes[] = {0, 1};
+  Tensor<double>* mats[] = {&C, &D};
   auto avgMs = benchmarkWithWarmup(warmup, nIter, [&]() {
-    // TODO (rohany): Figure out how to do the builtin function call here.
-    // MTTKRP(&B, mats, 0, false);
+    TTTP(&B, 2, modes, mats);
   });
 
   if (dw.rank == 0) {
@@ -238,7 +243,7 @@ void spadd3(int nIter, int warmup, std::string filename, std::string tensorC, st
 }
 
 int main(int argc, char** argv) {
-  int nIter = 20, warmup = 10, mttkrpLDim = 32, spmmJDim = 32;
+  int nIter = 20, warmup = 10, mttkrpLDim = 32, spmmJDim = 32, sddmmJDim = 128;
   std::string filename, bench = "spmv", tensorDims, spmspvVecFile, tensorC, tensorD;
   for (int i = 1; i < argc; i++) {
 #define INT_ARG(argname, varname) do {      \
@@ -261,6 +266,7 @@ int main(int argc, char** argv) {
     STRING_ARG("-tensorD", tensorD);
     INT_ARG("-mttkrpLDim", mttkrpLDim);
     INT_ARG("-spmmJDim", spmmJDim);
+    INT_ARG("-sddmmJDim", sddmmJDim);
 #undef INT_ARG
 #undef STRING_ARG
   }
@@ -301,6 +307,8 @@ int main(int argc, char** argv) {
     spttv(nIter, warmup, filename, dims, dw);
   } else if (bench == "mttkrp") {
     mttkrp(nIter, warmup, filename, dims, dw, mttkrpLDim);
+  } else if (bench == "sddmm") {
+    sddmm(nIter, warmup, filename, dims, dw, sddmmJDim);
   } else if (bench == "innerprod") {
     if (tensorC.empty()) {
       std::cout << "Must provide tensorC." << std::endl;
