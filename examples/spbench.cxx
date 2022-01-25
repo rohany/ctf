@@ -142,9 +142,9 @@ void spmm(int nIter, int warmup, std::string filename, std::vector<int> dims, Wo
 
 void mttkrp(int nIter, int warmup, std::string filename, std::vector<int> dims, World& dw, int ldim) {
   Tensor<double> B(3, true /* is_sparse */, dims.data(), dw);
-  Matrix<double> A(dims[0], ldim, dw);
   // These look backwards because the MTTKRP built-in routine operates on
   // transposed matrices.
+  Matrix<double> A(ldim, dims[0], dw);
   Matrix<double> C(ldim, dims[1], dw);
   Matrix<double> D(ldim, dims[2], dw);
   C.fill_random(1.0, 1.0);
@@ -305,11 +305,11 @@ int main(int argc, char** argv) {
     spmm(nIter, warmup, filename, dims, dw, spmmJDim);
   } else if (bench == "spttv" ) {
     spttv(nIter, warmup, filename, dims, dw);
-  } else if (bench == "mttkrp") {
+  } else if (bench == "spmttkrp") {
     mttkrp(nIter, warmup, filename, dims, dw, mttkrpLDim);
   } else if (bench == "sddmm") {
     sddmm(nIter, warmup, filename, dims, dw, sddmmJDim);
-  } else if (bench == "innerprod") {
+  } else if (bench == "spinnerprod") {
     if (tensorC.empty()) {
       std::cout << "Must provide tensorC." << std::endl;
       retVal = -1;
