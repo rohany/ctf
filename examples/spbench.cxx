@@ -200,7 +200,7 @@ void innerprod(int nIter, int warmup, std::string filename, std::string tensorC,
   if (dw.rank == 0) {
     std::cout << "Read " << B.nnz_tot << " non-zero entries from the file." << std::endl;
   }
-  C.read_sparse_from_file(filename.c_str());
+  C.read_sparse_from_file(tensorC.c_str());
   if (dw.rank == 0) {
     std::cout << "Read " << C.nnz_tot << " non-zero entries from the file." << std::endl;
   }
@@ -224,11 +224,11 @@ void spadd3(int nIter, int warmup, std::string filename, std::string tensorC, st
   if (dw.rank == 0) {
     std::cout << "Read " << B.nnz_tot << " non-zero entries from the file." << std::endl;
   }
-  C.read_sparse_from_file(filename.c_str());
+  C.read_sparse_from_file(tensorC.c_str());
   if (dw.rank == 0) {
     std::cout << "Read " << C.nnz_tot << " non-zero entries from the file." << std::endl;
   }
-  D.read_sparse_from_file(filename.c_str());
+  D.read_sparse_from_file(tensorD.c_str());
   if (dw.rank == 0) {
     std::cout << "Read " << D.nnz_tot << " non-zero entries from the file." << std::endl;
   }
@@ -243,7 +243,7 @@ void spadd3(int nIter, int warmup, std::string filename, std::string tensorC, st
 }
 
 int main(int argc, char** argv) {
-  int nIter = 20, warmup = 10, mttkrpLDim = 32, spmmJDim = 32, sddmmJDim = 128;
+  int nIter = 20, warmup = 10, mttkrpLDim = 32, spmmJDim = 32, sddmmJDim = 32;
   std::string filename, bench = "spmv", tensorDims, spmspvVecFile, tensorC, tensorD;
   for (int i = 1; i < argc; i++) {
 #define INT_ARG(argname, varname) do {      \
